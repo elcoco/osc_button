@@ -5,7 +5,6 @@
 #include <EthernetUdp.h>
 #include <OSCMessage.h>
 
-
 #include "esp32-hal-gpio.h"
 #include "pins_arduino.h"   // Find custom pin definitions in here
 
@@ -19,22 +18,13 @@
  */
 
 // Available GPIO's = 21, 17, 16, 18, 15, 3, 2, 1, 0, 44, 43, 20, 19, 48, 47, 46, 45, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33
-#define PIN_BTN_START   0
-#define PIN_BTN_STOP    1
-#define PIN_LED         2
-
-#define ADDR_START "/box0/start"
-#define ADDR_STOP "/box0/stop"
 
 // Time between blinks when triggered
 #define BLINK_DELAY_MS 500
 
-// Ethernet stuff
 const IPAddress ip(192, 168, 2, 201);
-const IPAddress gateway (192, 168, 2, 1);
-const IPAddress subnet (255, 255, 255, 0);
 const int port = 8888;   // local port
-
+                         //
 const IPAddress dest_ip(192, 168, 2, 255);
 const int dest_port = 5555;
 
@@ -54,16 +44,16 @@ struct Button {
 };
 
 
-struct Led led_start = { .pin = PIN_LED };
-struct Led led_stop = { .pin = PIN_LED };
+struct Led led_start = { .pin = 2 };
+struct Led led_stop  = { .pin = 2 };
 
-struct Button btn_start = { .pin = PIN_BTN_START,
-                            .addr = ADDR_START,
-                            .led = &led_start };
+struct Button btn_start = { .pin  = 0,
+                            .addr = "/box0/start",
+                            .led  = &led_start };
 
-struct Button btn_stop = { .pin = PIN_BTN_STOP,
-                            .addr = ADDR_STOP,
-                            .led = &led_stop };
+struct Button btn_stop = { .pin  = 1,
+                           .addr = "/box0/stop",
+                           .led  = &led_stop };
 
 void wait_for_link()
 {
@@ -90,7 +80,7 @@ int btn_check(struct Button *btn)
 
     // only trigger when previous state was not pressed
     if (state == LOW && btn->prev_state)
-        printf("Ignore\n");
+        asm("nop");
     else if (state == HIGH && btn->prev_state) {
         btn->prev_state = 0;
     }
@@ -107,7 +97,6 @@ void led_blink(struct Led *led, uint8_t n)
         digitalWrite(led->pin, 1);
         delay(10);
         digitalWrite(led->pin, 0);
-        printf("Blink\n");
         delay(BLINK_DELAY_MS);
     }
 }
@@ -141,7 +130,6 @@ void setup()
         printf("ERROR: No Ethernet hardware detected!\n");
         while (1);
     }
-    printf("Ethernet hardware detected!\n");
 
     wait_for_link();
     printf("Link is ON. Cable is connected.\n");
@@ -159,7 +147,6 @@ void loop()
     if (btn_check(&btn_stop))
         osc_send_msg(&btn_stop, 1);
 
-    //printf("ip = %s\n", Ethernet.localIP());
     delay(10);
 }
 
