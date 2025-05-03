@@ -1,3 +1,6 @@
+.cache
+.pio
+
 # Prerequisites
 *.d
 

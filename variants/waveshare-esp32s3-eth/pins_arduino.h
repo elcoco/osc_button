@@ -31,6 +31,7 @@ static const uint8_t MOSI  = 11;
 static const uint8_t MISO  = 13;
 static const uint8_t SCK   = 12;
 
+// ethernet
 static const uint8_t ETH_MOSI = 11;
 static const uint8_t ETH_MISO = 12;
 static const uint8_t ETH_CLK  = 13;
@@ -38,10 +39,14 @@ static const uint8_t ETH_CS   = 14;
 static const uint8_t ETH_INT  = 10;
 static const uint8_t ETH_RST  = 9;
 
+// sd card
 static const uint8_t SD_MOSI  = 6;
 static const uint8_t SD_MISO  = 5;
 static const uint8_t SD_CLK  = 7;
 static const uint8_t SD_CS  = 4;
+
+// neopixel
+static const uint8_t NEO_CTRL  = 21;
 
 static const uint8_t A0 = 1;
 static const uint8_t A1 = 2;
