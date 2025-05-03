@@ -5,7 +5,7 @@ ESP32 button that sends a message over OSC
 
 [Waveshare ESP32-S3-ETH](https://www.waveshare.com/wiki/ESP32-S3-ETH#Other_resource_link)
 
-![Pinout](https://www.waveshare.com/w/upload/e/e0/ESP32-S3-ETH-details-15.jpg "Pinout") {width="200px"}
+![Pinout](https://www.waveshare.com/w/upload/e/e0/ESP32-S3-ETH-details-15.jpg "Pinout") | width=100
 
 
 ## Upload
