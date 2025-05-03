@@ -17,4 +17,4 @@ ESP32 button that sends a message over OSC
 ## Debugging
 
     # Use 'osc-utility' to listen for OSC messages
-    ./osc-utility_0.2.1_linux_amd64 server --port 5555 --host 0.0.0.0
+    osc-utility server --port 5555 --host 0.0.0.0
