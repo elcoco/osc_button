@@ -55,6 +55,9 @@ struct Button btn_stop = { .pin  = 1,
                            .addr = "/box0/stop",
                            .led  = &led_stop };
 
+struct Button *buttons[] = {&btn_start, &btn_stop, NULL};
+
+
 void wait_for_link()
 {
     uint8_t was_connected = 1;
@@ -110,8 +113,6 @@ void osc_send_msg(struct Button *btn, int8_t msg)
     osc_msg.send(Udp); // send the bytes to the SLIP stream
     Udp.endPacket(); // mark the end of the OSC Packet
     osc_msg.empty(); // free space occupied by message
-                     //
-    led_blink(btn->led, 1);
 }
 
 void setup() 
@@ -142,10 +143,12 @@ void loop()
 {
     wait_for_link();
 
-    if (btn_check(&btn_start))
-        osc_send_msg(&btn_start, 1);
-    if (btn_check(&btn_stop))
-        osc_send_msg(&btn_stop, 1);
+    for (struct Button **btn=buttons ; *btn; btn++) {
+        if (btn_check(*btn)) {
+            osc_send_msg(*btn, 1);
+            led_blink((*btn)->led, 1);
+        }
+    }
 
     delay(10);
 }
