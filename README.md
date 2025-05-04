@@ -8,6 +8,9 @@ ESP32 button that sends a message over OSC
 
 <img src="https://www.waveshare.com/w/upload/e/e0/ESP32-S3-ETH-details-15.jpg" width=400/>
 
+## Configuration
+
+Configuration file can be found in include/config.h.  
 
 ## Upload
 
@@ -23,4 +26,4 @@ ESP32 button that sends a message over OSC
 https://github.com/72nd/osc-utility
 
     # Use 'osc-utility' to listen for OSC messages
-    osc-utility server --port 5555 --host 0.0.0.0
+    osc-utility server --port 53000 --host 0.0.0.0

@@ -8,6 +8,8 @@
 #include "esp32-hal-gpio.h"
 #include "pins_arduino.h"   // Find custom pin definitions in here
 
+#include "config.h"
+
 /* ethernet.h     ->  https://docs.arduino.cc/libraries/ethernet/#Ethernet%20Class
  * example        ->  https://github.com/Johannf78/ESP32-W5500/blob/main/code/ESP32withW5500Try1.ino
  * board          ->  https://www.waveshare.com/wiki/ESP32-S3-ETH#Other_resource_link
@@ -17,50 +19,7 @@
  * OSC debugging  ->  https://github.com/72nd/osc-utility
  */
 
-// Available GPIO's = 21, 17, 16, 18, 15, 3, 2, 1, 0, 44, 43, 20, 19, 48, 47, 46, 45, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33
-
-// Time between blinks when triggered
-#define BLINK_DELAY_MS 500
-
-#ifndef ADDR_BASE
-#define ADDR_BASE "box0"
-#endif
-
-const IPAddress ip(192, 168, 2, 201);
-const int port = 8888;   // local port
-                         //
-const IPAddress dest_ip(192, 168, 2, 255);
-const int dest_port = 5555;
-
-byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-
 EthernetUDP Udp;
-
-struct Led {
-    uint8_t pin;
-    uint8_t blink_enabled;  // When 1, led blinks using timer
-};
-
-struct Button {
-    uint8_t pin;
-    const char *addr;
-    uint8_t prev_state;
-    struct Led *led;
-};
-
-
-struct Led led_start = { .pin = 2 };
-struct Led led_stop  = { .pin = 3 };
-
-struct Button btn_start = { .pin  = 0,
-                            .addr = "/" ADDR_BASE "/start",
-                            .led  = &led_start };
-
-struct Button btn_stop = { .pin  = 1,
-                            .addr = "/" ADDR_BASE "/stop",
-                           .led  = &led_stop };
-
-struct Button *buttons[] = {&btn_start, &btn_stop, NULL};
 
 // timer for led blinking
 hw_timer_t *my_timer;
@@ -138,7 +97,7 @@ void led_blink(struct Led *led, uint8_t n)
         digitalWrite(led->pin, 1);
         delay(10);
         digitalWrite(led->pin, 0);
-        delay(BLINK_DELAY_MS);
+        delay(BLINK_DUTYCYCLE_MS);
     }
 }
 
@@ -147,7 +106,7 @@ void osc_send_msg(struct Button *btn, int8_t msg)
     printf("%s: triggered\n", btn->addr);
     OSCMessage osc_msg(btn->addr);
     osc_msg.add(msg);
-    Udp.beginPacket(dest_ip, dest_port);
+    Udp.beginPacket(btn->ip, btn->port);
     osc_msg.send(Udp); // send the bytes to the SLIP stream
     Udp.endPacket(); // mark the end of the OSC Packet
     osc_msg.empty(); // free space occupied by message
@@ -176,14 +135,13 @@ void setup()
     // Checks in ISR function if led blinking is enabled
     my_timer = timerBegin(0, 80, true);
     timerAttachInterrupt(my_timer, &isr_on_timer, true);
-    timerAlarmWrite(my_timer, BLINK_DELAY_MS * 1000, true);
+    timerAlarmWrite(my_timer, BLINK_DUTYCYCLE_MS * 1000, true);
     timerAlarmEnable(my_timer);
 }
 
 void loop() 
 {
     wait_for_link();
-
     for (struct Button **btn=buttons ; *btn; btn++) {
         if (btn_check(*btn)) {
             osc_send_msg(*btn, 1);
