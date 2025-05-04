@@ -34,6 +34,7 @@ EthernetUDP Udp;
 
 struct Led {
     uint8_t pin;
+    uint8_t blink_enabled;  // When 1, led blinks using timer
 };
 
 struct Button {
@@ -47,8 +48,10 @@ struct Button {
 #define ADDR_BASE "box0"
 #endif
 
+
+
 struct Led led_start = { .pin = 2 };
-struct Led led_stop  = { .pin = 2 };
+struct Led led_stop  = { .pin = 3 };
 
 struct Button btn_start = { .pin  = 0,
                             .addr = "/" ADDR_BASE "/start",
@@ -61,23 +64,47 @@ struct Button btn_stop = { .pin  = 1,
 struct Button *buttons[] = {&btn_start, &btn_stop, NULL};
 
 
+// timer for led blinking
+hw_timer_t *my_timer;
+
+void led_blink(struct Led *led, uint8_t n);
+
+void IRAM_ATTR isr_on_timer(){
+    // Do some blinking on leds with blink_enabled set
+    for (struct Button **btn=buttons ; *btn; btn++) {
+        if ((*btn)->led->blink_enabled)
+              digitalWrite((*btn)->led->pin, !digitalRead((*btn)->led->pin));
+    }
+}
+
 void wait_for_link()
 {
     uint8_t was_connected = 1;
 
     while (Ethernet.linkStatus() == LinkOFF) {
+        for (struct Button **btn=buttons ; *btn; btn++)
+            (*btn)->led->blink_enabled = 1;
+
         printf("Waiting for link\n");
         delay(500);
         was_connected = 0;
     }
     if (!was_connected)
         printf("Link is ON. Cable is connected.\n");
+
+    for (struct Button **btn=buttons ; *btn; btn++) {
+        (*btn)->led->blink_enabled = 0;
+        digitalWrite((*btn)->led->pin, LOW);
+    }
 }
 
 void btn_init(struct Button *btn)
 {
     pinMode(btn->pin, INPUT_PULLUP);
     btn->prev_state = 0;
+
+    pinMode(btn->led->pin, OUTPUT);
+    btn->led->blink_enabled = 0;
 }
 
 int btn_check(struct Button *btn)
@@ -96,6 +123,8 @@ int btn_check(struct Button *btn)
     }
     return 0;
 }
+
+
 
 void led_blink(struct Led *led, uint8_t n)
 {
@@ -118,11 +147,9 @@ void osc_send_msg(struct Button *btn, int8_t msg)
     osc_msg.empty(); // free space occupied by message
 }
 
+
 void setup() 
 {
-    pinMode(led_start.pin, OUTPUT);
-    pinMode(led_stop.pin, OUTPUT);
-
     SPI.begin(ETH_CLK, ETH_MISO, ETH_MOSI);
     delay(1000);
 
@@ -138,8 +165,14 @@ void setup()
     wait_for_link();
     printf("Link is ON. Cable is connected.\n");
 
-    btn_init(&btn_start);
-    btn_init(&btn_stop);
+    for (struct Button **btn=buttons ; *btn; btn++)
+        btn_init(*btn);
+
+    // Checks in ISR function if led blinking is enabled
+    my_timer = timerBegin(0, 80, true);
+    timerAttachInterrupt(my_timer, &isr_on_timer, true);
+    timerAlarmWrite(my_timer, BLINK_DELAY_MS * 1000, true);
+    timerAlarmEnable(my_timer);
 }
 
 void loop() 
