@@ -8,20 +8,23 @@
 // Time between blinks when triggered
 #define BLINK_DUTYCYCLE_MS 500
 
-// Override in platformio.ini
-#ifndef ADDR_BASE
-#define ADDR_BASE "box0"
-#endif
-
-// Override in platformio.ini
-#ifndef REMOTE_PORT
-#define REMOTE_PORT 53000
-#endif
-
-// Override in platformio.ini
-#ifndef MAC_ADDR
-#define MAC_ADDR 0xD0, 0x84, 0x51, 0xD7, 0x1A, 0xCB
-#endif
+// Override device specific settings in platformio.ini using build flags
+    #ifndef ADDR_BASE
+      #define ADDR_BASE "box0"
+    #endif
+    
+    #ifndef REMOTE_PORT
+      #define REMOTE_PORT 53000
+    #endif
+    
+    #ifndef LOCAL_IP
+      #define LOCAL_IP 10, 0, 0, 100
+    #endif
+    
+    #ifndef MAC_ADDR
+      #define MAC_ADDR 0xD0, 0x84, 0x51, 0xD7, 0x1A, 0xCB
+    #endif
+// End
 
 struct Led {
     uint8_t pin;
@@ -38,8 +41,8 @@ struct Button {
 };
 
 // Static IP/port of this device
-const IPAddress ip(192, 168, 2, 201);
-const int port = 8888;
+const IPAddress local_ip(LOCAL_IP);
+const int local_port = 8888;
 byte mac[6] = {MAC_ADDR};
 
 struct Led led_start = { .pin = 2 };
@@ -48,13 +51,13 @@ struct Led led_stop  = { .pin = 3 };
 struct Button btn_start = { .pin  = 0,
                             .addr = "/" ADDR_BASE "/start",
                             .led  = &led_start,
-                            .ip = IPAddress(192, 168, 2, 255),  // 255 == everyone on network
+                            .ip = IPAddress(10, 0, 0, 255),  // 255 == everyone on network
                             .port = REMOTE_PORT };
 
 struct Button btn_stop = { .pin  = 1,
                             .addr = "/" ADDR_BASE "/stop",
-                           .led  = &led_stop,
-                            .ip = IPAddress(192, 168, 2, 255),  // 255 == everyone on network
+                            .led  = &led_stop,
+                            .ip = IPAddress(10, 0, 0, 255),  // 255 == everyone on network
                             .port = REMOTE_PORT };
 
 struct Button *buttons[] = {&btn_start, &btn_stop, NULL};

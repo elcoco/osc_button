@@ -28,6 +28,7 @@ void isr_on_timer();
 void wait_for_link();
 void btn_init(struct Button *btn);
 int  btn_check(struct Button *btn);
+void buttons_debug();
 void led_blink(struct Led *led, uint8_t n);
 void osc_send_msg(struct Button *btn, int8_t msg);
 
@@ -56,7 +57,7 @@ void wait_for_link()
         was_connected = 0;
     }
     if (!was_connected)
-        printf("Link is ON. Cable is connected.\n");
+        printf("Link is UP\n");
 
     // End in LED off state
     for (struct Button **btn=buttons ; *btn; btn++) {
@@ -112,22 +113,34 @@ void osc_send_msg(struct Button *btn, int8_t msg)
     osc_msg.empty(); // free space occupied by message
 }
 
+void buttons_debug()
+{
+    /* Print message at boot */
+    printf("Local IP: %s\n", local_ip.toString().c_str());
+
+    printf("Configured buttons:\n");
+    for (struct Button **btn=buttons ; *btn; btn++)
+        printf("  %s\t=> %s:%d\n", (*btn)->addr, (*btn)->ip.toString().c_str(), (*btn)->port);
+}
+
 void setup() 
 {
+
     SPI.begin(ETH_CLK, ETH_MISO, ETH_MOSI);
     delay(1000);
 
     Ethernet.init(ETH_CS); 
-    Ethernet.begin(mac, ip);
-    Udp.begin(port);
+    Ethernet.begin(mac, local_ip);
+    Udp.begin(local_port);
+
 
     if (Ethernet.hardwareStatus() == EthernetNoHardware) {
         printf("ERROR: No Ethernet hardware detected!\n");
         while (1);
     }
 
+    buttons_debug();
     wait_for_link();
-    printf("Link is ON. Cable is connected.\n");
 
     for (struct Button **btn=buttons ; *btn; btn++)
         btn_init(*btn);
@@ -137,6 +150,7 @@ void setup()
     timerAttachInterrupt(my_timer, &isr_on_timer, true);
     timerAlarmWrite(my_timer, BLINK_DUTYCYCLE_MS * 1000, true);
     timerAlarmEnable(my_timer);
+
 }
 
 void loop() 
