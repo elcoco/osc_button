@@ -43,16 +43,19 @@ struct Button {
     struct Led *led;
 };
 
+#ifndef ADDR_BASE
+#define ADDR_BASE "box0"
+#endif
 
 struct Led led_start = { .pin = 2 };
 struct Led led_stop  = { .pin = 2 };
 
 struct Button btn_start = { .pin  = 0,
-                            .addr = "/box0/start",
+                            .addr = "/" ADDR_BASE "/start",
                             .led  = &led_start };
 
 struct Button btn_stop = { .pin  = 1,
-                           .addr = "/box0/stop",
+                            .addr = "/" ADDR_BASE "/stop",
                            .led  = &led_stop };
 
 struct Button *buttons[] = {&btn_start, &btn_stop, NULL};

@@ -14,6 +14,10 @@ ESP32 button that sends a message over OSC
     # Compile and upload over USB
     pio run --target upload
 
+    # Override ADDR_BASE build flag by specifying an 'env' (see: platformio.ini)
+    pio run --target upload -e box0
+    pio run --target upload -e box1
+
 ## Debugging
 
 https://github.com/72nd/osc-utility
