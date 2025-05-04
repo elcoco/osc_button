@@ -22,6 +22,10 @@
 // Time between blinks when triggered
 #define BLINK_DELAY_MS 500
 
+#ifndef ADDR_BASE
+#define ADDR_BASE "box0"
+#endif
+
 const IPAddress ip(192, 168, 2, 201);
 const int port = 8888;   // local port
                          //
@@ -44,11 +48,6 @@ struct Button {
     struct Led *led;
 };
 
-#ifndef ADDR_BASE
-#define ADDR_BASE "box0"
-#endif
-
-
 
 struct Led led_start = { .pin = 2 };
 struct Led led_stop  = { .pin = 3 };
@@ -63,13 +62,19 @@ struct Button btn_stop = { .pin  = 1,
 
 struct Button *buttons[] = {&btn_start, &btn_stop, NULL};
 
-
 // timer for led blinking
 hw_timer_t *my_timer;
 
+void isr_on_timer();
+void wait_for_link();
+void btn_init(struct Button *btn);
+int  btn_check(struct Button *btn);
 void led_blink(struct Led *led, uint8_t n);
+void osc_send_msg(struct Button *btn, int8_t msg);
 
-void IRAM_ATTR isr_on_timer(){
+
+void IRAM_ATTR isr_on_timer()
+{
     // Do some blinking on leds with blink_enabled set
     for (struct Button **btn=buttons ; *btn; btn++) {
         if ((*btn)->led->blink_enabled)
@@ -82,6 +87,8 @@ void wait_for_link()
     uint8_t was_connected = 1;
 
     while (Ethernet.linkStatus() == LinkOFF) {
+
+        // Use ISR to blink leds
         for (struct Button **btn=buttons ; *btn; btn++)
             (*btn)->led->blink_enabled = 1;
 
@@ -92,6 +99,7 @@ void wait_for_link()
     if (!was_connected)
         printf("Link is ON. Cable is connected.\n");
 
+    // End in LED off state
     for (struct Button **btn=buttons ; *btn; btn++) {
         (*btn)->led->blink_enabled = 0;
         digitalWrite((*btn)->led->pin, LOW);
@@ -124,8 +132,6 @@ int btn_check(struct Button *btn)
     return 0;
 }
 
-
-
 void led_blink(struct Led *led, uint8_t n)
 {
     for (uint8_t i=0 ; i<n ; i++) {
@@ -146,7 +152,6 @@ void osc_send_msg(struct Button *btn, int8_t msg)
     Udp.endPacket(); // mark the end of the OSC Packet
     osc_msg.empty(); // free space occupied by message
 }
-
 
 void setup() 
 {
@@ -188,4 +193,3 @@ void loop()
 
     delay(10);
 }
-
