@@ -120,7 +120,7 @@ void buttons_debug()
 
     printf("Configured buttons:\n");
     for (struct Button **btn=buttons ; *btn; btn++)
-        printf("  %s\t=> %s:%d\n", (*btn)->addr, (*btn)->ip.toString().c_str(), (*btn)->port);
+        printf("  %s\t(pin %d)\t=> %s:%d\n", (*btn)->addr, (*btn)->pin, (*btn)->ip.toString().c_str(), (*btn)->port);
 }
 
 void setup() 
