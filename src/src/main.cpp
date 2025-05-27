@@ -102,15 +102,22 @@ void led_blink(struct Led *led, uint8_t n)
     }
 }
 
-void osc_send_msg(struct Button *btn, int8_t msg)
+void osc_send_msg(struct Button *btn)
 {
-    printf("%s: triggered\n", btn->addr);
-    OSCMessage osc_msg(btn->addr);
-    osc_msg.add(msg);
-    Udp.beginPacket(btn->ip, btn->port);
-    osc_msg.send(Udp); // send the bytes to the SLIP stream
-    Udp.endPacket(); // mark the end of the OSC Packet
-    osc_msg.empty(); // free space occupied by message
+    printf("triggered\n");
+    for (int i=0 ; i<MAX_OSC_MESSAGES ; i++) {
+        struct Msg *msg = &btn->msgs[i];
+        if (msg == NULL)
+            return;
+
+        printf("Send: %s:%d%s\n", msg->ip.toString().c_str(), msg->port, msg->addr);
+        OSCMessage osc_msg(msg->addr);
+        //osc_msg.add(msg);
+        Udp.beginPacket(msg->ip, msg->port);
+        osc_msg.send(Udp); // send the bytes to the SLIP stream
+        Udp.endPacket(); // mark the end of the OSC Packet
+        osc_msg.empty(); // free space occupied by message
+    }
 }
 
 void buttons_debug()
@@ -119,8 +126,16 @@ void buttons_debug()
     printf("Local IP: %s\n", local_ip.toString().c_str());
 
     printf("Configured buttons:\n");
-    for (struct Button **btn=buttons ; *btn; btn++)
-        printf("  %s\t(pin %d)\t=> %s:%d\n", (*btn)->addr, (*btn)->pin, (*btn)->ip.toString().c_str(), (*btn)->port);
+    for (struct Button **btn=buttons ; *btn; btn++) {
+        printf("  Button:\n");
+
+        for (int i=0 ; i<MAX_OSC_MESSAGES ; i++) {
+            struct Msg *msg = &((*btn)->msgs[i]);
+            if (msg == NULL)
+                return;
+            printf("  MSG %d: %s:%d%s\n", i, msg->ip.toString().c_str(), msg->port, msg->addr);
+        }
+    }
 }
 
 void setup() 
@@ -158,7 +173,7 @@ void loop()
     wait_for_link();
     for (struct Button **btn=buttons ; *btn; btn++) {
         if (btn_check(*btn)) {
-            osc_send_msg(*btn, 1);
+            osc_send_msg(*btn);
             led_blink((*btn)->led, 1);
         }
     }

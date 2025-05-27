@@ -8,49 +8,73 @@
 // Time between blinks when triggered
 #define BLINK_DUTYCYCLE_MS 500
 
-// Override device specific settings in platformio.ini using build flags
-    #ifndef REMOTE_PORT
-      #define REMOTE_PORT 53000
-    #endif
-    
-    #ifndef LOCAL_IP
-      #define LOCAL_IP 10, 0, 0, 100
-    #endif
+#define MAX_OSC_MESSAGES 2  // maximum amount of messages to send per button press
 
-    #ifndef OSC_START_ADDR
-      #define OSC_START_ADDR "/box2/start"
-    #endif
-
-    #ifndef OSC_STOP_ADDR
-      #define OSC_STOP_ADDR "/box2/stop"
-    #endif
-
-    #ifndef OSC_START_TARGET_IP
-      #define OSC_START_TARGET_IP 10, 0, 0, 200
-    #endif
-    
-    #ifndef OSC_STOP_TARGET_IP
-      #define OSC_STOP_TARGET_IP 10, 0, 0, 255
-    #endif
-    
-    #ifndef MAC_ADDR
-      #define MAC_ADDR 0xD0, 0x84, 0x51, 0xD7, 0x1A, 0xCB
-    #endif
-// End
 
 struct Led {
     uint8_t pin;
     uint8_t blink_enabled;  // When 1, led blinks using timer
 };
 
-struct Button {
-    uint8_t pin;
+struct Msg {
     const char *addr;    // OSC address
-    uint8_t prev_state;
-    struct Led *led;
     const IPAddress ip;  // remote ip
     const int port;      // remote port
 };
+
+struct Button {
+    uint8_t pin;
+    uint8_t prev_state;
+    struct Led *led;
+    struct Msg msgs[MAX_OSC_MESSAGES+1]; // array, delimited by NULL
+};
+
+
+#ifdef TARGET_BOX1
+  #define LOCAL_IP 10, 0, 0, 101
+  #define REMOTE_PORT 53000
+  #define MAC_ADDR 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED
+
+  #define OSC_NEXT_TARGET_IP 10, 0, 0, 100
+  #define OSC_NEXT_TARGET_PORT 53000
+  #define OSC_STOP_TARGET_IP 10, 0, 0, 255
+  #define OSC_STOP_TARGET_PORT 53000
+#endif
+#ifdef TARGET_BOX2
+  #define LOCAL_IP 10, 0, 0, 201
+  #define REMOTE_PORT 53000
+  #define MAC_ADDR 0xD0, 0x84, 0x51, 0xD7, 0x1A, 0xCB
+
+  #define OSC_NEXT_TARGET_IP 10, 0, 0, 200
+  #define OSC_NEXT_TARGET_PORT 53000
+  #define OSC_STOP_TARGET_IP 10, 0, 0, 255
+  #define OSC_STOP_TARGET_PORT 53000
+#endif
+
+struct Msg next_playhead_move {
+    .addr = "/playhead/next",
+    .ip = IPAddress(OSC_NEXT_TARGET_IP),
+    .port = OSC_NEXT_TARGET_PORT
+};
+
+struct Msg next_playhead_start {
+    .addr = "/cue/playhead/start",
+    .ip = IPAddress(OSC_NEXT_TARGET_IP),
+    .port = OSC_NEXT_TARGET_PORT
+};
+
+struct Msg stop_playhead_move {
+    .addr = "/playhead/1",
+    .ip = IPAddress(OSC_STOP_TARGET_IP),
+    .port = OSC_STOP_TARGET_PORT
+};
+
+struct Msg stop_playhead_start {
+    .addr = "/cue/playhead/start",
+    .ip = IPAddress(OSC_STOP_TARGET_IP),
+    .port = OSC_STOP_TARGET_PORT
+};
+
 
 // Static IP/port of this device
 const IPAddress local_ip(LOCAL_IP);
@@ -61,16 +85,18 @@ struct Led led_start = { .pin = 2 };
 struct Led led_stop  = { .pin = 3 };
 
 struct Button btn_start = { .pin  = 0,
-                            .addr = OSC_START_ADDR,
                             .led  = &led_start,
-                            .ip = IPAddress(OSC_START_TARGET_IP),  // 255 == everyone on network
-                            .port = REMOTE_PORT };
+                            .msgs = { next_playhead_move,
+                                      next_playhead_start,
+                                      NULL }
+                          };
 
 struct Button btn_stop = { .pin  = 1,
-                            .addr = OSC_STOP_ADDR,
-                            .led  = &led_stop,
-                            .ip = IPAddress(OSC_STOP_TARGET_IP),  // 255 == everyone on network
-                            .port = REMOTE_PORT };
+                           .led  = &led_stop,
+                           .msgs = { stop_playhead_move,
+                                     stop_playhead_start,
+                                     NULL }
+                         };
 
 struct Button *buttons[] = {&btn_start, &btn_stop, NULL};
 
