@@ -9,16 +9,28 @@
 #define BLINK_DUTYCYCLE_MS 500
 
 // Override device specific settings in platformio.ini using build flags
-    #ifndef ADDR_BASE
-      #define ADDR_BASE "box0"
-    #endif
-    
     #ifndef REMOTE_PORT
       #define REMOTE_PORT 53000
     #endif
     
     #ifndef LOCAL_IP
       #define LOCAL_IP 10, 0, 0, 100
+    #endif
+
+    #ifndef OSC_START_ADDR
+      #define OSC_START_ADDR "/box2/start"
+    #endif
+
+    #ifndef OSC_STOP_ADDR
+      #define OSC_STOP_ADDR "/box2/stop"
+    #endif
+
+    #ifndef OSC_START_TARGET_IP
+      #define OSC_START_TARGET_IP 10, 0, 0, 200
+    #endif
+    
+    #ifndef OSC_STOP_TARGET_IP
+      #define OSC_STOP_TARGET_IP 10, 0, 0, 255
     #endif
     
     #ifndef MAC_ADDR
@@ -49,15 +61,15 @@ struct Led led_start = { .pin = 2 };
 struct Led led_stop  = { .pin = 3 };
 
 struct Button btn_start = { .pin  = 0,
-                            .addr = "/" ADDR_BASE "/start",
+                            .addr = OSC_START_ADDR,
                             .led  = &led_start,
-                            .ip = IPAddress(10, 0, 0, 255),  // 255 == everyone on network
+                            .ip = IPAddress(OSC_START_TARGET_IP),  // 255 == everyone on network
                             .port = REMOTE_PORT };
 
 struct Button btn_stop = { .pin  = 1,
-                            .addr = "/" ADDR_BASE "/stop",
+                            .addr = OSC_STOP_ADDR,
                             .led  = &led_stop,
-                            .ip = IPAddress(10, 0, 0, 255),  // 255 == everyone on network
+                            .ip = IPAddress(OSC_STOP_TARGET_IP),  // 255 == everyone on network
                             .port = REMOTE_PORT };
 
 struct Button *buttons[] = {&btn_start, &btn_stop, NULL};
