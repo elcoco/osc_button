@@ -52,13 +52,14 @@ struct Button {
 #endif
 
 struct Msg next_playhead_move {
-    .addr = "/playhead/next",
+    .addr = "/playhead/nextSequence",
     .ip = IPAddress(OSC_NEXT_TARGET_IP),
     .port = OSC_NEXT_TARGET_PORT
 };
 
 struct Msg next_playhead_start {
-    .addr = "/cue/playhead/start",
+    .addr = "/auditionGo",
+    //.addr = "/cue/playhead/start",
     .ip = IPAddress(OSC_NEXT_TARGET_IP),
     .port = OSC_NEXT_TARGET_PORT
 };
@@ -70,7 +71,8 @@ struct Msg stop_playhead_move {
 };
 
 struct Msg stop_playhead_start {
-    .addr = "/cue/playhead/start",
+    //.addr = "/cue/playhead/start",
+    .addr = "/auditionGo",
     .ip = IPAddress(OSC_STOP_TARGET_IP),
     .port = OSC_STOP_TARGET_PORT
 };
