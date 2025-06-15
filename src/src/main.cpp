@@ -30,7 +30,7 @@ void btn_init(struct Button *btn);
 int  btn_check(struct Button *btn);
 void buttons_debug();
 void led_blink(struct Led *led, uint8_t n);
-void osc_send_msg(struct Button *btn, int8_t msg);
+void osc_send_msg(struct Button *btn);
 
 
 void IRAM_ATTR isr_on_timer()
@@ -105,19 +105,12 @@ void led_blink(struct Led *led, uint8_t n)
 void osc_send_msg(struct Button *btn)
 {
     printf("triggered\n");
-    for (int i=0 ; i<MAX_OSC_MESSAGES ; i++) {
-        struct Msg *msg = &btn->msgs[i];
-        if (msg == NULL)
-            return;
-
-        printf("Send: %s:%d%s\n", msg->ip.toString().c_str(), msg->port, msg->addr);
-        OSCMessage osc_msg(msg->addr);
-        //osc_msg.add(msg);
-        Udp.beginPacket(msg->ip, msg->port);
-        osc_msg.send(Udp); // send the bytes to the SLIP stream
-        Udp.endPacket(); // mark the end of the OSC Packet
-        osc_msg.empty(); // free space occupied by message
-    }
+    printf("Send: %s:%d%s\n", btn->msg.ip.toString().c_str(), btn->msg.port, btn->msg.addr);
+    OSCMessage osc_msg(btn->msg.addr);
+    Udp.beginPacket(btn->msg.ip, btn->msg.port);
+    osc_msg.send(Udp); // send the bytes to the SLIP stream
+    Udp.endPacket(); // mark the end of the OSC Packet
+    osc_msg.empty(); // free space occupied by message
 }
 
 void buttons_debug()
@@ -126,16 +119,8 @@ void buttons_debug()
     printf("Local IP: %s\n", local_ip.toString().c_str());
 
     printf("Configured buttons:\n");
-    for (struct Button **btn=buttons ; *btn; btn++) {
-        printf("  Button:\n");
-
-        for (int i=0 ; i<MAX_OSC_MESSAGES ; i++) {
-            struct Msg *msg = &((*btn)->msgs[i]);
-            if (msg == NULL)
-                return;
-            printf("  MSG %d: %s:%d%s\n", i, msg->ip.toString().c_str(), msg->port, msg->addr);
-        }
-    }
+    for (struct Button **btn=buttons ; *btn; btn++)
+        printf("MSG: %s:%d%s\n", (*btn)->msg.ip.toString().c_str(), (*btn)->msg.port, (*btn)->msg.addr);
 }
 
 void setup() 
@@ -147,7 +132,6 @@ void setup()
     Ethernet.init(ETH_CS); 
     Ethernet.begin(mac, local_ip);
     Udp.begin(local_port);
-
 
     if (Ethernet.hardwareStatus() == EthernetNoHardware) {
         printf("ERROR: No Ethernet hardware detected!\n");
