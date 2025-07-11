@@ -26,13 +26,13 @@ hw_timer_t *my_timer;
 
 void isr_on_timer();
 void wait_for_link();
-void btn_init(struct Button *btn);
 int  btn_check(struct Button *btn);
 void buttons_debug();
 void led_blink(struct Led *led, uint8_t n);
 void osc_send_msg(struct Button *btn);
 
 
+/*
 void IRAM_ATTR isr_on_timer()
 {
     // Do some blinking on leds with blink_enabled set
@@ -41,6 +41,7 @@ void IRAM_ATTR isr_on_timer()
               digitalWrite((*btn)->led->pin, !digitalRead((*btn)->led->pin));
     }
 }
+*/
 
 void wait_for_link()
 {
@@ -48,9 +49,6 @@ void wait_for_link()
 
     while (Ethernet.linkStatus() == LinkOFF) {
 
-        // Use ISR to blink leds
-        for (struct Button **btn=buttons ; *btn; btn++)
-            (*btn)->led->blink_enabled = 1;
 
         printf("Waiting for link\n");
         delay(500);
@@ -58,21 +56,6 @@ void wait_for_link()
     }
     if (!was_connected)
         printf("Link is UP\n");
-
-    // End in LED off state
-    for (struct Button **btn=buttons ; *btn; btn++) {
-        (*btn)->led->blink_enabled = 0;
-        digitalWrite((*btn)->led->pin, LOW);
-    }
-}
-
-void btn_init(struct Button *btn)
-{
-    pinMode(btn->pin, INPUT_PULLUP);
-    btn->prev_state = 0;
-
-    pinMode(btn->led->pin, OUTPUT);
-    btn->led->blink_enabled = 0;
 }
 
 int btn_check(struct Button *btn)
@@ -113,7 +96,7 @@ void osc_send_msg(struct Button *btn)
     osc_msg.empty(); // free space occupied by message
 }
 
-void buttons_debug()
+void debug()
 {
     /* Print message at boot */
     printf("Local IP: %s\n", local_ip.toString().c_str());
@@ -121,11 +104,44 @@ void buttons_debug()
     printf("Configured buttons:\n");
     for (struct Button **btn=buttons ; *btn; btn++)
         printf("MSG: %s:%d%s\n", (*btn)->msg.ip.toString().c_str(), (*btn)->msg.port, (*btn)->msg.addr);
+
+    printf("Configured leds:\n");
+    for (struct Led **led=leds ; *led; led++)
+        printf("MSG: %s:%d%s\n", (*led)->msg.ip.toString().c_str(), (*led)->msg.port, (*led)->msg.addr);
+}
+
+void osc_led_handler(OSCMessage *msg, struct Led *led)
+{
+    if (! msg->isInt(0))
+        return;
+
+    printf("Set LED pin '%d' to %d\n", led->pin, msg->getInt(0));
+    digitalWrite(led->pin, msg->getInt(0));
+}
+
+void osc_get_msg()
+{
+    /* Retrieve UDP messages and parse into OSC messages */
+    int size;
+ 
+    if((size = Udp.parsePacket()) > 0) {
+        OSCMessage msg;
+        while(size--)
+            msg.fill(Udp.read());
+
+        printf("Reiceived message on: %s\n", msg.getAddress());
+
+        for (struct Led **led=leds ; *led != NULL; led++) {
+            if (msg.fullMatch((*led)->msg.addr))
+                osc_led_handler(&msg, *led);
+            else
+                printf("Received unhandled message\n");
+        }
+    }
 }
 
 void setup() 
 {
-
     SPI.begin(ETH_CLK, ETH_MISO, ETH_MOSI);
     delay(1000);
 
@@ -138,29 +154,35 @@ void setup()
         while (1);
     }
 
-    buttons_debug();
+    debug();
     wait_for_link();
 
-    for (struct Button **btn=buttons ; *btn; btn++)
-        btn_init(*btn);
+    for (struct Button **btn=buttons ; *btn; btn++) {
+        pinMode((*btn)->pin, INPUT_PULLUP);
+        (*btn)->prev_state = 0;
+    }
 
+    for (struct Led **led=leds ; *led; led++) {
+        pinMode((*led)->pin, OUTPUT);
+        digitalWrite((*led)->pin, 0);
+    }
     // Checks in ISR function if led blinking is enabled
-    my_timer = timerBegin(0, 80, true);
-    timerAttachInterrupt(my_timer, &isr_on_timer, true);
-    timerAlarmWrite(my_timer, BLINK_DUTYCYCLE_MS * 1000, true);
-    timerAlarmEnable(my_timer);
-
+    //my_timer = timerBegin(0, 80, true);
+    //timerAttachInterrupt(my_timer, &isr_on_timer, true);
+    //timerAlarmWrite(my_timer, BLINK_DUTYCYCLE_MS * 1000, true);
+    //timerAlarmEnable(my_timer);
 }
 
 void loop() 
 {
     wait_for_link();
-    for (struct Button **btn=buttons ; *btn; btn++) {
-        if (btn_check(*btn)) {
-            osc_send_msg(*btn);
-            led_blink((*btn)->led, 1);
-        }
-    }
 
-    delay(10);
+    // Check for IO input
+    for (struct Button **btn=buttons ; *btn; btn++) {
+        if (btn_check(*btn))
+            osc_send_msg(*btn);
+    }
+    // Check for incoming OSC messages
+    osc_get_msg();
+    delay(100);
 }
